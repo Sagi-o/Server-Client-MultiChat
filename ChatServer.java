@@ -1,7 +1,8 @@
-import org.omg.CORBA.CODESET_INCOMPATIBLE;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -10,7 +11,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,6 +52,7 @@ public class ChatServer {
      */
     private static final int PORT = 9001;
 
+
     /**
      * The HashMap of all names and writers of clients in the chat room.  Maintained
      * so that we can check that new clients are not registering name
@@ -65,17 +66,17 @@ public class ChatServer {
      * spawns handler threads.
      */
     public static void main(String[] args) throws Exception {
-        JTextArea textArea = GUI();
 
-        textArea.append("The chat server is running.\n");
+        JFrame frame = GUI();
 
         ServerSocket listener = new ServerSocket(PORT);
+
         try {
             while (true) {
-                new Handler(listener.accept(), textArea).start();
+                new Handler(listener.accept(), frame).start();
             }
         } finally {
-            listener.close();
+                listener.close();
         }
     }
 
@@ -89,15 +90,15 @@ public class ChatServer {
         private Socket socket;
         private BufferedReader in;
         private PrintWriter out;
-        private JTextArea textArea;
+        private JFrame frame;
 
         /**
          * Constructs a handler thread, squirreling away the socket.
          * All the interesting work is done in the run method.
          */
-        public Handler(Socket socket, JTextArea textArea) {
+        public Handler(Socket socket, JFrame frame) {
             this.socket = socket;
-            this.textArea = textArea;
+            this.frame = frame;
         }
 
         /**
@@ -108,6 +109,7 @@ public class ChatServer {
          * broadcasts them.
          */
         public void run() {
+
             try {
                 // Create character streams for the socket.
                 in = new BufferedReader(new InputStreamReader(
@@ -154,9 +156,7 @@ public class ChatServer {
 
                     if (input == null) {
                         return;
-                    }
-
-                    else if (input.startsWith("SENDTO")) {
+                    } else if (input.startsWith("SENDTO")) {
                         String substring = input.substring(7);
 
                         // Broadcast message
@@ -169,7 +169,7 @@ public class ChatServer {
                             sendTo(substring);
                         }
 
-                    } else if (input.startsWith("GETUSERS"))  {
+                    } else if (input.startsWith("GETUSERS")) {
                         printConnections();
                     } else if (input.startsWith("LOGOUT")) {
                         break;
@@ -183,15 +183,14 @@ public class ChatServer {
             }
         }
 
-        private void sendBroadcast(String message ,boolean system, boolean logging) {
+        private void sendBroadcast(String message, boolean system, boolean logging) {
             for (Map.Entry<String, PrintWriter> user : users.entrySet()) {
                 PrintWriter writer = user.getValue();
 
                 if (!name.equals(user.getKey())) {
-                    if (!system){
+                    if (!system) {
                         writer.println("MESSAGE " + name + ": " + message);
-                    }
-                    else writer.println("MESSAGE " + message);
+                    } else writer.println("MESSAGE " + message);
                 }
             }
 
@@ -202,7 +201,7 @@ public class ChatServer {
             String toUser = "";
             int index = 0;
 
-            for (int i = 0; i<substring.length() ; i++) {
+            for (int i = 0; i < substring.length(); i++) {
                 if (substring.charAt(i) != ' ') {
                     toUser += substring.charAt(i);
                 } else {
@@ -224,7 +223,7 @@ public class ChatServer {
             for (Map.Entry<String, PrintWriter> user : users.entrySet()) {
                 names += user.getKey() + ", ";
             }
-            out.println("GETUSERS  " + names.substring(0, names.length()-2));
+            out.println("GETUSERS  " + names.substring(0, names.length() - 2));
         }
 
         private void logout() {
@@ -246,18 +245,30 @@ public class ChatServer {
         private void log(String message) {
             String timeStamp = new SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().getTime());
 
-            textArea.append(timeStamp + ": " + message +"\n");
-        }
+            Component[] components = frame.getContentPane().getComponents();
 
+            for (Component comp : components) {
+                if (comp instanceof JTextArea) {
+                    JTextArea textArea = (JTextArea) comp;
+                    textArea.append(timeStamp + ": " + message + "\n");
+                }
+
+            }
+
+        /*
         private void clearLog() {
             textArea.selectAll();
             textArea.replaceSelection("");
         }
+        */
+        }
+
     }
 
-    private static JTextArea GUI() {
+    private static JFrame GUI() {
         JFrame frame = new JFrame("Server");
         JTextArea textArea = new JTextArea(8, 40);
+        //JButton startStop = new JButton("Start");
         Container contentPane = frame.getContentPane();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setBounds(50, 50, 300, 400);
@@ -265,8 +276,34 @@ public class ChatServer {
         frame.setVisible(true);
         textArea.setEditable(false);
 
+        //startStop.setSize(60,30);
+        //startStop.setVisible(true);
+        //contentPane.add(startStop, BorderLayout.CENTER);
         contentPane.add(textArea);
 
-        return textArea;
+        /*
+        startStop.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String mode = startStop.getText();
+
+                if (mode.equals("start")) {
+                    textArea.append("\n\nThe chat server is running.\n");
+                    startStop.setText("Stop");
+                    active = true;
+
+                } else {
+                    textArea.append("\n\nThe chat server is shut down.\n");
+                    startStop.setText("Start");
+                    active = false;
+                }
+
+            }
+        });
+        */
+
+        textArea.append("The server is running. \n");
+
+        return frame;
     }
 }
