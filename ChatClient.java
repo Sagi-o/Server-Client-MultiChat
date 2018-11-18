@@ -29,11 +29,11 @@ import javax.swing.JTextField;
  * this string should be displayed in its message area.
  */
 public class ChatClient {
-    String name="";
     BufferedReader in;
     PrintWriter out;
     JFrame frame = new JFrame("Chatter");
     JTextField textField = new JTextField(40);
+
     JTextArea messageArea = new JTextArea(8, 40);
 
     /**
@@ -49,7 +49,7 @@ public class ChatClient {
         // Layout GUI
         textField.setEditable(false);
         messageArea.setEditable(false);
-        frame.getContentPane().add(textField, "North");
+        frame.getContentPane().add(textField, "South");
         frame.getContentPane().add(new JScrollPane(messageArea), "Center");
         frame.pack();
 

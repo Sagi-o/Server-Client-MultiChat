@@ -1,11 +1,17 @@
+import org.omg.CORBA.CODESET_INCOMPATIBLE;
+
+import javax.swing.*;
+import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 
 /**
@@ -41,49 +47,32 @@ import java.util.Map;
  */
 
 public class ChatServer {
-
     /**
      * The port that the server listens on.
      */
     private static final int PORT = 9001;
 
     /**
-     * The set of all names of clients in the chat room.  Maintained
+     * The HashMap of all names and writers of clients in the chat room.  Maintained
      * so that we can check that new clients are not registering name
      * already in use.
      */
-    private static HashSet<String> names = new HashSet<>();
 
     private static HashMap<String, PrintWriter> users = new HashMap<>();
-
-    /**
-     * The set of all the print writers for all the clients.  This
-     * set is kept so we can easily broadcast messages.
-     */
-    private static HashSet<PrintWriter> writers = new HashSet<>();
 
     /**
      * The appplication main method, which just listens on a port and
      * spawns handler threads.
      */
     public static void main(String[] args) throws Exception {
-        System.out.println("The chat server is running.");
+        JTextArea textArea = GUI();
 
-        //users.put("itai", new PrintWriter());
-    /*
-        String user = "itai";
-        if (users.get(user) != null) {
-            // User exists!
-            PrintWriter toUser = users.get(user); // Value of user -> PrintWriter -> Adrres to send msgs
-            toUser.println("hi itai");
-        } else {
-            // User not exists or disconnected
-        }
-        */
+        textArea.append("The chat server is running.\n");
+
         ServerSocket listener = new ServerSocket(PORT);
         try {
             while (true) {
-                new Handler(listener.accept()).start();
+                new Handler(listener.accept(), textArea).start();
             }
         } finally {
             listener.close();
@@ -100,13 +89,15 @@ public class ChatServer {
         private Socket socket;
         private BufferedReader in;
         private PrintWriter out;
+        private JTextArea textArea;
 
         /**
          * Constructs a handler thread, squirreling away the socket.
          * All the interesting work is done in the run method.
          */
-        public Handler(Socket socket) {
+        public Handler(Socket socket, JTextArea textArea) {
             this.socket = socket;
+            this.textArea = textArea;
         }
 
         /**
@@ -152,8 +143,9 @@ public class ChatServer {
                 out.println("NAMEACCEPTED");
                 sendBroadcast("Client " + name + " logged in", true, true);
 
+
                 // Server log
-                System.out.println("Client " + name + " logged in");
+                log("Client " + name + " logged in");
 
                 // Accept messages from this client and broadcast them.
                 // Ignore other clients that cannot be broadcasted to.
@@ -184,7 +176,8 @@ public class ChatServer {
                     }
                 }
             } catch (IOException e) {
-                System.out.println(e);
+                log(e.toString());
+
             } finally {
                 logout();
             }
@@ -241,13 +234,39 @@ public class ChatServer {
                 out.println("MESSAGE Goodbye");
                 users.remove(name);
                 sendBroadcast(name + " logged out", true, true);
-                System.out.println("Client " + name + " logged out");
+                log("Client " + name + " logged out");
             }
             try {
                 socket.close();
             } catch (IOException e) {
-                System.out.println("Error, client " + name + " can't logout: " + e);
+                log("Error, client " + name + " can't logout: " + e.toString());
             }
         }
+
+        private void log(String message) {
+            String timeStamp = new SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().getTime());
+
+            textArea.append(timeStamp + ": " + message +"\n");
+        }
+
+        private void clearLog() {
+            textArea.selectAll();
+            textArea.replaceSelection("");
+        }
+    }
+
+    private static JTextArea GUI() {
+        JFrame frame = new JFrame("Server");
+        JTextArea textArea = new JTextArea(8, 40);
+        Container contentPane = frame.getContentPane();
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setBounds(50, 50, 300, 400);
+
+        frame.setVisible(true);
+        textArea.setEditable(false);
+
+        contentPane.add(textArea);
+
+        return textArea;
     }
 }
